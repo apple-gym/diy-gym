@@ -27,6 +27,7 @@ class AddonFactory:
             from .rewards.stuck_joint_cost import StuckJointCost
             from .rewards.electricity_cost import ElectricityCost
             from .rewards.time_penalty import TimePenalty
+            from .rewards.out_of_bounds_penalty import OutOfBoundsPenalty
             from .misc.respawn import Respawn
             from .misc.spawn_multiple import SpawnMultiple
             from .misc.draw_coords import DrawCoords
@@ -51,6 +52,7 @@ class AddonFactory:
                 'external_force': ExternalForce,
                 'visual_randomizer': VisualRandomizer,
                 'dynamics_randomizer': DynamicsRandomizer,
+                'out_of_bounds_penalty': OutOfBoundsPenalty,
             }
 
     @staticmethod
