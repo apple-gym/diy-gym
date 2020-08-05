@@ -1,6 +1,7 @@
 import pybullet as p
 
 from gym import spaces
+import numpy as np
 from diy_gym.addons.addon import Addon
 
 
@@ -11,6 +12,9 @@ class JointController(Addon):
         super(JointController, self).__init__(parent, config)
 
         self.uid = parent.uid
+
+        self.position_gain = config.get('position_gain', 0.015)
+        self.velocity_gain = config.get('velocity_gain', 1.0)
 
         self.control_mode = {
             'position': p.POSITION_CONTROL,
@@ -31,11 +35,17 @@ class JointController(Addon):
         self.rest_position = config.get('rest_position', [0] * len(self.joint_ids))
 
         self.torque_limit = [p.getJointInfo(self.uid, joint_id)[10] for joint_id in self.joint_ids]
-        self.action_space = spaces.Box(-0.5, 0.5, shape=(len(self.joint_ids), ), dtype='float32')
 
-    def reset(self):
-        for joint_id, angle in zip(self.joint_ids, self.rest_position):
-            p.resetJointState(self.uid, joint_id, angle)
+        max_action = np.array(config.get('max_action', [0.5] * len(self.joint_ids)))
+        self.action_space = spaces.Box(-max_action, max_action, shape=(len(self.joint_ids), ), dtype='float32')
+
+
+        self.random_reset = config.get('action_range', [0.] * len(self.joint_ids))
+
+    def reset(self):        
+        random_delta = np.random.random(len(self.joint_ids)) * self.random_reset
+        for joint_id, angle, d_angle in zip(self.joint_ids, self.rest_position, random_delta):
+            p.resetJointState(self.uid, joint_id, angle + d_angle)
 
     def update(self, action):
         kwargs = {}
@@ -53,6 +63,6 @@ class JointController(Addon):
         p.setJointMotorControlArray(self.uid,
                                     self.joint_ids,
                                     self.control_mode,
-                                    positionGains=[0.03] * len(action),
-                                    velocityGains=[1.0] * len(action),
+                                    positionGains=[self.position_gain] * len(action),
+                                    velocityGains=[self.velocity_gain] * len(action),
                                     **kwargs)
