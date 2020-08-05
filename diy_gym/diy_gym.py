@@ -26,6 +26,7 @@ class DIYGym(gym.Env, Receptor):
 
     Args:
         config_file (string): A file path pointing to the configuration file describing the environment
+        **kwargs: Any extra arguments such as render=False will modify the config after loading
 
     Configs:
         max_episode_steps (int, optional): the number of timesteps to allow per episode (disabled by default)
@@ -50,11 +51,15 @@ class DIYGym(gym.Env, Receptor):
         flatten_actions (bool, optional, False): if True, the step function will expect a single numpy array containing
             the same number of actions as specified in the environment's action space
     """
-    def __init__(self, config_file):
+    def __init__(self, config_file, **kwargs):
         gym.Env.__init__(self)
         Receptor.__init__(self)
 
         config = Configuration.from_file(config_file)
+
+        # Add any optional args
+        for k, v in kwargs.items():
+            config.set(k, v)
 
         self.name = config.name
         self._max_episode_steps = config.get('max_episode_steps') if 'max_episode_steps' in config else None
