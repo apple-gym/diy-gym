@@ -36,9 +36,12 @@ class JointController(Addon):
 
         self.torque_limit = [p.getJointInfo(self.uid, joint_id)[10] for joint_id in self.joint_ids]
 
-        max_action = np.array(config.get('max_action', [0.5] * len(self.joint_ids)))
-        self.action_space = spaces.Box(-max_action, max_action, shape=(len(self.joint_ids), ), dtype='float32')
-
+        self.joined = config.get('joined', False)
+        if self.joined:
+            max_action = np.array(config.get('max_action', [0.5]))
+        else:
+            max_action = np.array(config.get('max_action', [0.5] * len(self.joint_ids)))
+        self.action_space = spaces.Box(-max_action, max_action, shape=(len(max_action), ), dtype='float32')
 
         self.random_reset = config.get('action_range', [0.] * len(self.joint_ids))
 
@@ -48,6 +51,10 @@ class JointController(Addon):
             p.resetJointState(self.uid, joint_id, angle + d_angle)
 
     def update(self, action):
+        if self.joined:
+            print(action)
+            action = list(action) * len(self.joint_ids)
+            print(action)
         kwargs = {}
 
         if self.control_mode == p.POSITION_CONTROL:
