@@ -15,6 +15,7 @@ class JointController(Addon):
 
         self.position_gain = config.get('position_gain', 0.015)
         self.velocity_gain = config.get('velocity_gain', 1.0)
+        self.torque_gain = config.get('torque_gain', 1.0)
 
         self.control_mode = {
             'position': p.POSITION_CONTROL,
@@ -38,9 +39,9 @@ class JointController(Addon):
 
         self.joined = config.get('joined', False)
         if self.joined:
-            max_action = np.array(config.get('max_action', [0.5]))
+            max_action = np.array(config.get('max_action', [1]))
         else:
-            max_action = np.array(config.get('max_action', [0.5] * len(self.joint_ids)))
+            max_action = np.array(config.get('max_action', [1] * len(self.joint_ids)))
         self.action_space = spaces.Box(-max_action, max_action, shape=(len(max_action), ), dtype='float32')
 
         self.random_reset = config.get('action_range', [0.] * len(self.joint_ids))
@@ -52,9 +53,7 @@ class JointController(Addon):
 
     def update(self, action):
         if self.joined:
-            print(action)
             action = list(action) * len(self.joint_ids)
-            print(action)
         kwargs = {}
 
         if self.control_mode == p.POSITION_CONTROL:

@@ -36,11 +36,11 @@ class InverseKinematicsController(Addon):
         self.torque_limit = [p.getJointInfo(self.uid, joint_id)[10] for joint_id in self.joint_ids]
         self.rest_position = config.get('rest_position', [0] * len(self.joint_ids))
 
-        self.action_space = spaces.Dict({'linear': spaces.Box(-0.01, 0.01, shape=(3, ), dtype='float32')})
+        self.action_space = spaces.Dict({'linear': spaces.Box(-1, 1, shape=(3, ), dtype='float32')})
         self.use_orientation = config.get('use_orientation', False)
 
         if self.use_orientation:
-            self.action_space.spaces['rotation'] = spaces.Box(-0.01, 0.01, shape=(3, ), dtype='float32')
+            self.action_space.spaces['rotation'] = spaces.Box(-1, 1, shape=(3, ), dtype='float32')
 
         self.reset()
 
