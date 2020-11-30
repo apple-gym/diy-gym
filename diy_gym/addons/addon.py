@@ -96,6 +96,8 @@ class Addon:
 
     To do that, addons should subclass Addon and implement any of the methods declared below (they can also implement none of them, that's fine too). Each of these
     functions are basically hooks called by DIYGym class, see the individual docstrings for more on how to use them.
+    
+    Inputs: parent: diy_gym.model.Model, config: diy_gym.model.Model
 
     Note:
         If a addon implements either update() or observe() then it's a good idea for them to also define action and observation spaces. The environment will collate

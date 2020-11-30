@@ -55,7 +55,7 @@ class DIYGym(gym.Env, Receptor):
         gym.Env.__init__(self)
         Receptor.__init__(self)
 
-        config = Configuration.from_file(config_file)
+        self.config = config = Configuration.from_file(config_file)
 
         # Add any optional args
         for k, v in kwargs.items():
@@ -70,7 +70,7 @@ class DIYGym(gym.Env, Receptor):
             yaw = config.get('camera_yaw', 180)
             pitch = config.get('camera_pitch', -41)
             target_position = config.get('camera_target_position', [0.0, 0.20, 0.50])
-            p.connect(p.GUI)
+            cId = p.connect(p.GUI, options="--opengl2")
             p.resetDebugVisualizerCamera(distance, yaw, pitch, target_position)
         else:
             cId = p.connect(p.SHARED_MEMORY)

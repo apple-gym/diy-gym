@@ -59,3 +59,6 @@ class Configuration:
             dict: The first nested config which contains the specified key
         '''
         return next(iter(self.find_all(key)))
+
+    def __repr__(self):
+        return f'<{type(self).__name__} name="{self.name}" keys={list(self.node.keys())}>'

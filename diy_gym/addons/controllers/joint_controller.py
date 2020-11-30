@@ -6,7 +6,10 @@ from diy_gym.addons.addon import Addon
 
 
 class JointController(Addon):
-    """JointController
+    """
+    JointController
+
+    Desired position or velocity or torque
     """
     def __init__(self, parent, config):
         super(JointController, self).__init__(parent, config)
@@ -15,7 +18,6 @@ class JointController(Addon):
 
         self.position_gain = config.get('position_gain', 0.015)
         self.velocity_gain = config.get('velocity_gain', 1.0)
-        self.torque_gain = config.get('torque_gain', 1.0)
 
         self.control_mode = {
             'position': p.POSITION_CONTROL,
@@ -35,16 +37,29 @@ class JointController(Addon):
         self.joint_ids = [info[0] for info in joint_info if info[1].decode('UTF-8') in joints and info[3] > -1]
         self.rest_position = config.get('rest_position', [0] * len(self.joint_ids))
 
-        self.torque_limit = [p.getJointInfo(self.uid, joint_id)[10] for joint_id in self.joint_ids]
+        self.torque_limit = np.array([p.getJointInfo(self.uid, joint_id)[10] for joint_id in self.joint_ids])
+        self.vel_limit = np.array([p.getJointInfo(self.uid, joint_id)[11] for joint_id in self.joint_ids])
+        
 
         self.joined = config.get('joined', False)
-        if self.joined:
-            max_action = np.array(config.get('max_action', [1]))
-        else:
-            max_action = np.array(config.get('max_action', [1] * len(self.joint_ids)))
-        self.action_space = spaces.Box(-max_action, max_action, shape=(len(max_action), ), dtype='float32')
 
-        self.random_reset = config.get('action_range', [0.] * len(self.joint_ids))
+        # # TODO get from upp and lower post in post mode?
+        # if self.joined:
+        #     max_action = np.array(config.get('max_action', [1]))
+        # else:
+        #     max_action = np.array(config.get('max_action', [1] * len(self.joint_ids)))
+
+        if self.control_mode == p.TORQUE_CONTROL:
+            self.action_space = spaces.Box(-self.torque_limit, self.torque_limit, dtype='float32')
+        elif self.control_mode == p.VELOCITY_CONTROL:
+            self.action_space = spaces.Box(-self.vel_limit, self.vel_limit, dtype='float32')
+        else:
+            low = np.array([p.getJointInfo(self.uid, joint_id)[8] for joint_id in self.joint_ids])
+            high = np.array([p.getJointInfo(self.uid, joint_id)[9] for joint_id in self.joint_ids])
+            self.action_space = spaces.Box(-low, high, shape=(len(low), ), dtype='float32')
+        self.torque_limit
+
+        self.random_reset = config.get('reset_range', [0.] * len(self.joint_ids))
 
     def reset(self):        
         random_delta = np.random.random(len(self.joint_ids)) * self.random_reset

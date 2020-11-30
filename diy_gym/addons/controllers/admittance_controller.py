@@ -5,6 +5,11 @@ from gym import spaces
 from diy_gym.addons.addon import Addon
 
 class AdmittanceController(Addon):
+    """
+    Mechanical admittance is the inverse of impedance - it defines the motions that result from a force input. Usefull for human robot interactions.
+    
+    https://en.wikipedia.org/wiki/Impedance_control
+    """
     def __init__(self, parent, config):
         super(AdmittanceController, self).__init__(parent, config)
 

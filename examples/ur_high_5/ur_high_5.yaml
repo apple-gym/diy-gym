@@ -13,6 +13,10 @@ ur5_l:
     xyz: [-0.55, 0.4, 0.0]
     rpy: [0.0, 0.0, -1.57]
 
+    hand:
+        model: robotiq_3f/gripper.urdf
+        parent_frame: ee_fixed_joint
+
     controller:
         addon: ik_controller
         rest_position: [-0.17, -0.73, -1.93, -0.36, -0.03, -0.06]
@@ -23,7 +27,7 @@ ur5_l:
         addon: joint_state_sensor
 
 ur5_r:
-    model: ur5/ur5_robot.urdf
+    model: ur5/ur5_2f.urdf
     xyz: [0.55, 0.4, 0.0]
     rpy: [0.0, 0.0, 1.57]
 

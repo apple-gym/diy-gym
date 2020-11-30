@@ -14,8 +14,8 @@ if __name__ == '__main__':
 
     while True:
         action = env.action_space.sample()
-        action['ur5_l']['controller']['linear'][:] = observation['ur_high_5']['distance_to_target']['position'] * 0.3
-        action['ur5_r']['controller']['linear'][:] = -observation['ur_high_5']['distance_to_target']['position'] * 0.3
+        action['ur5_l']['controller']['linear'][:] = observation['ur_high_5']['distance_to_target']['position'] * 0.
+        action['ur5_r']['controller']['linear'][:] = -observation['ur_high_5']['distance_to_target']['position'] * 0.
         action['ur5_l']['controller']['rotation'][:] = 0
         action['ur5_r']['controller']['rotation'][:] = 0
 

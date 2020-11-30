@@ -104,3 +104,6 @@ class Model(Receptor):
             xyz, rot = model_state[0], model_state[1]
 
         return xyz, rot
+
+    def __repr__(self):
+        return f'<{type(self).__name__} {self.name}>'
