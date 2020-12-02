@@ -70,7 +70,7 @@ class DIYGym(gym.Env, Receptor):
             yaw = config.get('camera_yaw', 180)
             pitch = config.get('camera_pitch', -41)
             target_position = config.get('camera_target_position', [0.0, 0.20, 0.50])
-            cId = p.connect(p.GUI, options="--opengl2")
+            cId = p.connect(p.GUI)
             p.resetDebugVisualizerCamera(distance, yaw, pitch, target_position)
         else:
             cId = p.connect(p.SHARED_MEMORY)

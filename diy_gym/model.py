@@ -93,7 +93,11 @@ class Model(Receptor):
 
     def get_frame_id(self, frame):
         frames = [p.getJointInfo(self.uid, i)[1].decode('utf-8') for i in range(p.getNumJoints(self.uid))]
-        return frames.index(frame) if frame in frames else -1
+        return frames.index(frame) if frame in frames else - 1
+        
+    def find_frames_ids(self, key):
+        joint_info = [p.getJointInfo(self.uid, i) for i in range(p.getNumJoints(self.uid))]
+        return [j[0] for j in joint_info if key in j[1].decode()]
 
     def get_transform(self, frame_id=-1):
         if frame_id >= 0:
