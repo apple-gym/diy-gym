@@ -33,6 +33,7 @@ class AddonFactory:
             from .misc.draw_coords import DrawCoords
             from .misc.visual_randomizer import VisualRandomizer
             from .misc.dynamics_randomizer import DynamicsRandomizer
+            from .debug.debug_addon import DebugMarkers
 
             self.addons = {
                 'ik_controller': InverseKinematicsController,
@@ -53,6 +54,7 @@ class AddonFactory:
                 'visual_randomizer': VisualRandomizer,
                 'dynamics_randomizer': DynamicsRandomizer,
                 'out_of_bounds_penalty': OutOfBoundsPenalty,
+                'debug_markers': DebugMarkers,
             }
 
     @staticmethod

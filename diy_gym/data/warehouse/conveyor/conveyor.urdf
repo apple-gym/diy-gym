@@ -9,7 +9,7 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="conveyor_without_belt.obj" scale="1.0 1.0 1.0"/>
+        <!-- <mesh filename="conveyor_without_belt.obj" scale="1.0 1.0 1.0"/> -->
         <mesh filename="belt.obj" scale="1.0 1.0 1.0"/>
       </geometry>
       <material name="white">
@@ -28,7 +28,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="conveyor_without_belt.obj" scale="1.0 1.0 1.0"/>
+        <!-- <mesh filename="conveyor_without_belt.obj" scale="1.0 1.0 1.0"/> -->
         <mesh filename="belt.obj" scale="1.0 1.0 1.0"/>
         <!-- You could also specify the collision (for the conveyor_without_belt) with a "box" tag: -->
         <!-- <box size=".06 .06 .06"/> -->

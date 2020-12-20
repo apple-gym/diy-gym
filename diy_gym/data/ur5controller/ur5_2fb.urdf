@@ -37,8 +37,8 @@
     <child link="shoulder_link"/>
     <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.089159"/>
     <axis xyz="0 0 1"/>
-    <limit effort="1500.0" lower="-6.26573" upper="6.26573" velocity="3.15"/>
-    <dynamics damping="0.0" friction="0.0"/>
+    <limit effort="150.0" lower="-6.26573" upper="6.26573" velocity="3.15"/>
+    <dynamics damping="0.1" friction="10.0"/>
   </joint>
 
 
@@ -69,8 +69,8 @@
     <child link="upper_arm_link"/>
     <origin rpy="0.0 1.570796325 0.0" xyz="0.0 0.13585 0.0"/>
     <axis xyz="0 1 0"/>
-    <limit effort="1500.0" lower="-6.26573" upper="6.26573" velocity="3.15"/>
-    <dynamics damping="0.0" friction="0.0"/>
+    <limit effort="150.0" lower="-6.26573" upper="6.26573" velocity="3.15"/>
+    <dynamics damping="0.1" friction="10.0"/>
   </joint>
 
 
@@ -101,8 +101,8 @@
     <child link="forearm_link"/>
     <origin rpy="0.0 0.0 0.0" xyz="0.0 -0.1197 0.425"/>
     <axis xyz="0 1 0"/>
-    <limit effort="1500.0" lower="-6.26573" upper="6.26573" velocity="3.15"/>
-    <dynamics damping="0.0" friction="0.0"/>
+    <limit effort="150.0" lower="-6.26573" upper="6.26573" velocity="3.15"/>
+    <dynamics damping="0.1" friction="10.0"/>
   </joint>
 
 
@@ -133,8 +133,8 @@
     <child link="wrist_1_link"/>
     <origin rpy="0.0 1.570796325 0.0" xyz="0.0 0.0 0.39225"/>
     <axis xyz="0 1 0"/>
-    <limit effort="280.0" lower="-6.26573" upper="6.26573" velocity="3.2"/>
-    <dynamics damping="0.0" friction="0.0"/>
+    <limit effort="28.0" lower="-6.26573" upper="6.26573" velocity="3.2"/>
+    <dynamics damping="0.1" friction="10.0"/>
   </joint>
 
 
@@ -165,8 +165,8 @@
     <child link="wrist_2_link"/>
     <origin rpy="0.0 0.0 0.0" xyz="0.0 0.093 0.0"/>
     <axis xyz="0 0 1"/>
-    <limit effort="280.0" lower="-6.26573" upper="6.26573" velocity="3.2"/>
-    <dynamics damping="0.0" friction="0.0"/>
+    <limit effort="28.0" lower="-6.26573" upper="6.26573" velocity="3.2"/>
+    <dynamics damping="0.1" friction="10.0"/>
   </joint>
 
 
@@ -197,8 +197,8 @@
     <child link="wrist_3_link"/>
     <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.09465"/>
     <axis xyz="0 1 0"/>
-    <limit effort="280.0" lower="-6.26573" upper="6.26573" velocity="3.2"/>
-    <dynamics damping="0.0" friction="0.0"/>
+    <limit effort="28.0" lower="-6.26573" upper="6.26573" velocity="3.2"/>
+    <dynamics damping="0.1" friction="10.0"/>
   </joint>
 
 
@@ -372,7 +372,7 @@
     <parent link="simple_gripper_base"/>
     <child link="simple_gripper_right_driver"/>
     <axis xyz="1 0 0"/>
-    <limit effort="600" lower="0.0" upper="0.715584844444" velocity="1.91986177778"/>
+    <limit effort="60" lower="0.0" upper="0.715584844444" velocity="1.91986177778"/>
   </joint>
 
   <link name="simple_gripper_right_driver">
@@ -430,7 +430,7 @@
     <parent link="simple_gripper_right_coupler"/>
     <child link="simple_gripper_right_follower"/>
     <axis xyz="1 0 0"/>
-    <limit effort="1760" lower="-2.96705911111" upper="2.96705911111" velocity="1.91986177778"/>
+    <limit effort="176" lower="-2.96705911111" upper="2.96705911111" velocity="1.91986177778"/>
     <mimic joint="simple_gripper_right_driver_joint" multiplier="-1"/>
   </joint>
 
@@ -488,7 +488,7 @@
     <parent link="simple_gripper_base"/>
     <child link="simple_gripper_right_spring_link"/>
     <axis xyz="1 0 0"/>
-    <limit effort="1760" lower="-2.96705911111" upper="2.96705911111" velocity="1.91986177778"/>
+    <limit effort="176" lower="-2.96705911111" upper="2.96705911111" velocity="1.91986177778"/>
     <mimic joint="simple_gripper_right_driver_joint" multiplier="1"/>
   </joint>
 
@@ -520,7 +520,7 @@
     <parent link="simple_gripper_base"/>
     <child link="simple_gripper_left_driver"/>
     <axis xyz="1 0 0"/>
-    <limit effort="1760" lower="0.0" upper="0.715584844444" velocity="1.91986177778"/>
+    <limit effort="176" lower="0.0" upper="0.715584844444" velocity="1.91986177778"/>
     <mimic joint="simple_gripper_right_driver_joint" multiplier="1"/>
   </joint>
 
@@ -579,7 +579,7 @@
     <parent link="simple_gripper_left_coupler"/>
     <child link="simple_gripper_left_follower"/>
     <axis xyz="1 0 0"/>
-    <limit effort="1760" lower="-2.96705911111" upper="2.96705911111" velocity="1.91986177778"/>
+    <limit effort="176" lower="-2.96705911111" upper="2.96705911111" velocity="1.91986177778"/>
     <mimic joint="simple_gripper_right_driver_joint" multiplier="-1"/>
   </joint>
 
@@ -637,7 +637,7 @@
     <parent link="simple_gripper_base"/>
     <child link="simple_gripper_left_spring_link"/>
     <axis xyz="1 0 0"/>
-    <limit effort="1760" lower="-2.96705911111" upper="2.96705911111" velocity="1.91986177778"/>
+    <limit effort="176" lower="-2.96705911111" upper="2.96705911111" velocity="1.91986177778"/>
     <mimic joint="simple_gripper_right_driver_joint" multiplier="1"/>
   </joint>
 
