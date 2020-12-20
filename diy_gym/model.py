@@ -62,7 +62,7 @@ class Model(Receptor):
         except StopIteration:
             raise ValueError('Could not find URDF: ' + urdf)
 
-        self.uid = p.loadURDF(full_urdf_path, useFixedBase=use_fixed_base, globalScaling=scale)
+        self.uid = p.loadURDF(full_urdf_path, useFixedBase=use_fixed_base, globalScaling=scale, flags=p.URDF_USE_MATERIAL_COLORS_FROM_MTL)
 
         if parent is None:
             p.resetBasePositionAndOrientation(self.uid, self.position, self.orientation)
