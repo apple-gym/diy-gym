@@ -71,7 +71,11 @@ class Camera(Addon):
                                  self.resolution[1],
                                  T_world_cam.T.flatten(),
                                  self.projection_matrix,
-                                 flags=p.ER_NO_SEGMENTATION_MASK if not self.use_seg_mask else 0)
+                                 flags=p.ER_NO_SEGMENTATION_MASK if not self.use_seg_mask else 0,
+                                 shadow=False,
+                                 renderer=p.ER_TINY_RENDERER,
+                                #  renderer=p.ER_BULLET_HARDWARE_OPENGL,
+                                 )
 
         obs = {
             'rgb': np.array(image[2], copy=False).reshape(self.resolution + [4])[:, :, :3] / 255.

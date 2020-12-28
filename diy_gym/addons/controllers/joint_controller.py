@@ -1,6 +1,7 @@
 import pybullet as p
 
 from gym import spaces
+import pybullet_planning as pbp
 import numpy as np
 from diy_gym.addons.addon import Addon
 
@@ -41,13 +42,6 @@ class JointController(Addon):
         self.vel_limit = np.array([p.getJointInfo(self.uid, joint_id)[11] for joint_id in self.joint_ids])
         
 
-        self.joined = config.get('joined', False)
-
-        # # TODO get from upp and lower post in post mode?
-        # if self.joined:
-        #     max_action = np.array(config.get('max_action', [1]))
-        # else:
-        #     max_action = np.array(config.get('max_action', [1] * len(self.joint_ids)))
 
         if self.control_mode == p.TORQUE_CONTROL:
             self.action_space = spaces.Box(-self.torque_limit, self.torque_limit, dtype='float32')
@@ -67,11 +61,17 @@ class JointController(Addon):
             p.resetJointState(self.uid, joint_id, angle + d_angle)
 
     def update(self, action):
-        if self.joined:
-            action = list(action) * len(self.joint_ids)
+        pGain = self.position_gain
+        vGain = self.velocity_gain
+
         kwargs = {}
 
         if self.control_mode == p.POSITION_CONTROL:
+            # To be able to move close, we need a tighter fit as we get closer
+            joint_state = pbp.get_joint_positions(self.uid, self.joint_ids)
+            dist = pbp.get_distance(action, joint_state)
+            pGain = pGain / (dist + 1e-2)
+            vGain = vGain + pGain ** 2
             kwargs['targetPositions'] = action
             kwargs['targetVelocities'] = [0.0] * len(action)
             kwargs['forces'] = self.torque_limit
@@ -84,6 +84,6 @@ class JointController(Addon):
         p.setJointMotorControlArray(self.uid,
                                     self.joint_ids,
                                     self.control_mode,
-                                    positionGains=[self.position_gain] * len(action),
-                                    velocityGains=[self.velocity_gain] * len(action),
+                                    positionGains=[pGain] * len(action),
+                                    velocityGains=[vGain] * len(action),
                                     **kwargs)
