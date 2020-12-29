@@ -3,6 +3,7 @@ from gym import spaces
 from gym.utils import seeding
 from collections import OrderedDict
 import pybullet as p
+import pybullet_data
 import numpy as np
 
 from .config import Configuration
@@ -75,6 +76,8 @@ class DIYGym(gym.Env, Receptor):
         else:
             cId = p.connect(p.SHARED_MEMORY)
             if cId < 0: p.connect(p.DIRECT)
+
+        p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
         p.resetSimulation()
 

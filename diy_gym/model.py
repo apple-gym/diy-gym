@@ -6,7 +6,7 @@ from collections import OrderedDict
 from .addons.addon import AddonFactory, Receptor
 
 urdf_path = ['', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data/'), pybullet_data.getDataPath()]
-
+urdf_path += os.environ.get("DIY_GYM_PATH", "").split(';')
 
 class Model(Receptor):
     """Models represent any object to be spawned in the simulation environment.
@@ -32,7 +32,7 @@ class Model(Receptor):
 
 
     Configs:
-        model (str): a path to a URDF file relative to any of the directories listed under `urdf_path` above.
+        model (str): a path to a URDF file relative to any of the directories listed under `urdf_path` above or set in a env var, e.g. `DIY_GYM_PATH=".;~"`.
         xyz (list of floats, optional, [0,0,0]): the position at which to spawn the model
         rpy (list of floats, optional, [0,0,0]): the orientation at which to spawn the model expressed in euler angles
         scale (float, optional, 1): resizes the model (i.e setting to 2 will double its size)
