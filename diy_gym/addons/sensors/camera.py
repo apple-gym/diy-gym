@@ -6,6 +6,7 @@ from diy_gym.addons.addon import Addon
 import torchvision.models
 from PIL import Image
 import torch
+import logging
 from torchvision.transforms.functional import to_tensor
 
 
@@ -62,7 +63,11 @@ class Camera(Addon):
             modules=list(resnet18.children())[:-1]
             self.feature_extractor = torch.nn.Sequential(*modules).eval()
             self.observation_space.spaces.update(
-                {'features': spaces.Box(-100., 100., shape=(512*2,) if self.use_depth else (512,), dtype='float32')})
+                {'features': spaces.Box(-100., 100., shape=(512* 2,) if self.use_depth else(512,), dtype='float32')})
+            self.use_cuda = torch.cuda.is_available()
+            if self.use_cuda:
+                logging.info('using cuda.half for feature extraction')
+                self.feature_extractor.to('cuda').half()
         
         if self.use_seg_mask:
             self.observation_space.spaces.update(
@@ -84,6 +89,8 @@ class Camera(Addon):
             x2 = normalize(to_tensor(im))
 
             x = torch.stack([x1, x2])
+            if self.use_cuda:
+                x = x.to('cuda').half()
             h = self.feature_extractor(x)
             h = h.cpu().detach().numpy() # shape (2, 512)
         return h.flatten()
@@ -107,7 +114,7 @@ class Camera(Addon):
                                  self.projection_matrix,
                                  flags=p.ER_NO_SEGMENTATION_MASK if not self.use_seg_mask else 0,
                                  shadow=False,
-                                 renderer=p.ER_TINY_RENDERER,
+                                #  renderer=p.ER_TINY_RENDERER,
                                 #  renderer=p.ER_BULLET_HARDWARE_OPENGL,
                                  )
 

@@ -50,7 +50,7 @@ class JointController(Addon):
         else:
             low = np.array([p.getJointInfo(self.uid, joint_id)[8] for joint_id in self.joint_ids])
             high = np.array([p.getJointInfo(self.uid, joint_id)[9] for joint_id in self.joint_ids])
-            self.action_space = spaces.Box(-low, high, shape=(len(low), ), dtype='float32')
+            self.action_space = spaces.Box(low, high, shape=(len(low), ), dtype='float32')
         self.torque_limit
 
         self.random_reset = config.get('reset_range', [0.] * len(self.joint_ids))

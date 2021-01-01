@@ -62,7 +62,17 @@ class Model(Receptor):
         except StopIteration:
             raise ValueError('Could not find URDF: ' + urdf)
 
-        self.uid = p.loadURDF(full_urdf_path, useFixedBase=use_fixed_base, globalScaling=scale, flags=p.URDF_USE_MATERIAL_COLORS_FROM_MTL | p.URDF_USE_SELF_COLLISION_EXCLUDE_PARENT)
+        flags = 0
+        if config.get('URDF_USE_MATERIAL_COLORS_FROM_MTL', False):
+            flags = flags | p.URDF_USE_MATERIAL_COLORS_FROM_MTL
+        if config.get('URDF_USE_SELF_COLLISION_EXCLUDE_PARENT', False):
+            flags = flags | p.URDF_USE_SELF_COLLISION_EXCLUDE_PARENT
+        if config.get('URDF_USE_IMPLICIT_CYLINDER', False):
+            flags |= p.URDF_USE_IMPLICIT_CYLINDER
+        if config.get('URDF_MERGE_FIXED_LINKS', False):
+            flags |= p.URDF_MERGE_FIXED_LINKS
+            
+        self.uid = p.loadURDF(full_urdf_path, useFixedBase=use_fixed_base, globalScaling=scale, flags=flags)
 
         if parent is None:
             p.resetBasePositionAndOrientation(self.uid, self.position, self.orientation)

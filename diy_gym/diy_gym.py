@@ -72,10 +72,13 @@ class DIYGym(gym.Env, Receptor):
             pitch = config.get('camera_pitch', -41)
             target_position = config.get('camera_target_position', [0.0, 0.20, 0.50])
             cId = p.connect(p.GUI)#, options="--opengl2")
+            # cId = p.connect(p.GUI, "window_backend=2") # HACK
             p.resetDebugVisualizerCamera(distance, yaw, pitch, target_position)
+            p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW,0)
         else:
             cId = p.connect(p.SHARED_MEMORY)
             if cId < 0: p.connect(p.DIRECT)
+            # p.loadPlugin("eglRendererPlugin") # HACK
 
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
@@ -103,7 +106,8 @@ class DIYGym(gym.Env, Receptor):
         self.collapse_terminals_func = any if config.get(
             'terminal_if_any', False) else all if config.get('terminal_if_all', False) else None
         self.flatten_observations = config.get('flatten_observations', False)
-        self.flatten_actions = config.get('flatten_actions', False)
+        self.flatten_actions=config.get('flatten_actions', False)
+        self.action_repeat=config.get('action_repeat', 1)
 
         self.seed()
         self.reset()
@@ -212,7 +216,8 @@ class DIYGym(gym.Env, Receptor):
                 self.receptors[receptor_name].addons[addon_name].update(addon_action)
 
         self.step_counter += 1
-        p.stepSimulation()
+        for _ in range(self.action_repeat):
+            p.stepSimulation()
 
         return self.observe(), self.reward(), self.is_terminal(), {}
 
