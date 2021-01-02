@@ -8,7 +8,7 @@ from PIL import Image
 import torch
 import logging
 from torchvision.transforms.functional import to_tensor
-
+logger = logging.getLogger('diy_gym')
 
 class Camera(Addon):
     """Captures RGB, depth and segmentation images from the perspective of a model or fixed in the world frame.
@@ -66,7 +66,7 @@ class Camera(Addon):
                 {'features': spaces.Box(-100., 100., shape=(512* 2,) if self.use_depth else(512,), dtype='float32')})
             self.use_cuda = torch.cuda.is_available()
             if self.use_cuda:
-                logging.info('using cuda.half for feature extraction')
+                logger.info('using cuda.half for feature extraction')
                 self.feature_extractor.to('cuda').half()
         
         if self.use_seg_mask:
@@ -75,6 +75,7 @@ class Camera(Addon):
 
     def extract_features(self, obs):
         # see https://arxiv.org/pdf/1710.10710.pdf
+        # and https://github.com/LuciaBaldassini/Grasping_Detection_System
 
         normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
@@ -84,7 +85,8 @@ class Camera(Addon):
             im = im.resize((224, 224))
             x1 = normalize(to_tensor(im))
 
-            im = Image.fromarray(np.uint8(obs['depth'] * 255)).convert('RGB')
+            im = -1/(obs['depth']-1.) # from [-99, 0) to [0, 1]
+            im = Image.fromarray(np.uint8(im * 255)).convert('RGB')
             im = im.resize((224, 224))
             x2 = normalize(to_tensor(im))
 
@@ -126,7 +128,7 @@ class Camera(Addon):
             # the depth buffer is normalised to [0 1] whereas NDC coords require [-1 1] ref: https://bit.ly/2rcXidZ
             depth_ndc = np.array(image[3], copy=False).reshape(self.resolution) * 2 - 1
 
-            # recover eye coordinate depth using the projection matrix ref: https://bit.ly/2vZJCsx
+            # recover eye coordinate depth using the projection matrix ref: https://bit.ly/2vZJCsx this makes it -99 to 0 distance
             depth = self.K[2, 3] / (self.K[3, 2] * depth_ndc - self.K[2, 2])
 
             obs['depth'] = depth
