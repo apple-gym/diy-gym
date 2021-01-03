@@ -6,6 +6,7 @@ from diy_gym.addons.addon import Addon
 import torchvision.models
 from PIL import Image
 import torch
+import torch.nn.functional as F
 import os
 import logging
 from torchvision.transforms.functional import to_tensor
@@ -60,37 +61,34 @@ class Camera(Addon):
         if self.use_depth:
             self.observation_space.spaces.update({'depth': spaces.Box(0., 10., shape=self.resolution, dtype='float32')})
 
+
+        self.dtype = torch.half if torch.cuda.is_available() else torch.float
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         if self.use_features:
             resnet18 = torchvision.models.resnet18(pretrained=True).eval()
             modules=list(resnet18.children())[:-1]
             self.feature_extractor = torch.nn.Sequential(*modules).eval()
-            self.use_cuda = torch.cuda.is_available()
-            if self.use_cuda:
-                logger.info('using cuda.half for feature extraction')
-                self.feature_extractor.to('cuda').half()
+            self.feature_extractor = self.feature_extractor.to(self.dtype).to(self.device)
+            logger.info(f'using resnet at {self.device} {self.dtype} for feature extraction')
 
             # Two 512 feature strings
             self.observation_space.spaces.update(
                 {'features': spaces.Box(-100., 100., shape=(512* 2,) if self.use_depth else(512,), dtype='float32')})
 
         if self.use_grconvnet3:
-            assert self.resolution[0]%2==1, 'should have odd numbered resolution for use_grconvnet3'
-            assert self.resolution[1]%2==1, 'should have odd numbered resolution for use_grconvnet3'
 
-            from .grconvnet3 import GenerativeResnet3Headless
+            from .models.grconvnet3 import GenerativeResnet3Headless
             grconvnet3_path = os.path.join(
                 os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'),
                 'data/models/cornell-randsplit-rgbd-grconvnet3-drop1-ch16/epoch_30_iou_0.97.pt'
             )
             self.feature_extractor = GenerativeResnet3Headless().eval()
             self.feature_extractor.load_state_dict(state_dict=torch.load(grconvnet3_path))
-            self.use_cuda = torch.cuda.is_available()
-            if self.use_cuda:
-                logger.info('using cuda.half for feature extraction')
-                self.feature_extractor.to('cuda').half()
+            logger.info(f'using grconvnet3 at {self.device} {self.dtype} for feature extraction')
+            self.feature_extractor = self.feature_extractor.to(self.dtype).to(self.device)
 
             self.observation_space.spaces.update(
-                {'features': spaces.Box(-1., 1., shape=self.resolution + [16], dtype='float32')})
+                {'features': spaces.Box(-1., 1., shape=(self.resolution[0]//4, self.resolution[1]//4, 4), dtype='float16')})
         
         if self.use_seg_mask:
             self.observation_space.spaces.update(
@@ -98,11 +96,12 @@ class Camera(Addon):
 
     def extract_features(self, obs):
         if self.use_grconvnet3:
+            # see https://github.com/skumra/robotic-grasping & https://arxiv.org/abs/1909.04810
             depth = obs['depth']
             rgb = obs['rgb']
 
             # transpose
-            depth = np.clip((depth - depth.mean()), -1, 1)[:,:, None].transpose((2, 0, 1))
+            depth = np.clip((depth - depth.mean()), -1, 1)[:, :, None].transpose((2, 0, 1))
             rgb = rgb.transpose((2, 0, 1))
 
             # join
@@ -113,12 +112,11 @@ class Camera(Addon):
                 ),
                 1
             )
-            x = torch.from_numpy(x.astype(np.float32))
+            
             with torch.no_grad():
-                if self.use_cuda:
-                    x = x.to('cuda').half()
-                h = self.feature_extractor(x)  # out Shape(1, 16, resolution[0], resolution[1])
-                h = h.cpu().detach().numpy()[0].astype(np.float32).transpose([1, 2, 0])
+                x = torch.from_numpy(x.astype(np.float32)).to(self.dtype).to(self.device)
+                h = self.feature_extractor(x)  # out Shape(1, 4, resolution[0]//4, resolution[1]//4)
+                h = h.cpu().detach().numpy()[0].transpose([1, 2, 0]).astype(np.float16)
             return h # (res, res, 16)
         else:
             # see https://arxiv.org/pdf/1710.10710.pdf
@@ -138,8 +136,7 @@ class Camera(Addon):
                 x2 = normalize(to_tensor(im))
 
                 x = torch.stack([x1, x2])
-                if self.use_cuda:
-                    x = x.to('cuda').half()
+                x = x.to(self.dtype).to(self.device)
                 h = self.feature_extractor(x)
                 h = h.cpu().detach().numpy()  # shape (2, 512)
             return h.flatten()
