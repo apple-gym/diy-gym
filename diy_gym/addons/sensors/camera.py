@@ -6,6 +6,7 @@ from diy_gym.addons.addon import Addon
 import torchvision.models
 from PIL import Image
 import torch
+import os
 import logging
 from torchvision.transforms.functional import to_tensor
 logger = logging.getLogger('diy_gym')
@@ -45,7 +46,8 @@ class Camera(Addon):
 
         self.use_depth = config.get('use_depth', True)
         self.use_seg_mask = config.get('use_segmentation_mask', False)
-        self.use_features = config.get('use_features', False)
+        self.use_features=config.get('use_features', False)
+        self.use_grconvnet3 = config.get('use_grconvnet3', False)
 
         self.T_parent_cam = self.trans_from_xyz_quat(xyz, p.getQuaternionFromEuler(rpy))
         self.projection_matrix = p.computeProjectionMatrixFOV(self.fov, self.aspect, self.near, self.far)
@@ -62,40 +64,85 @@ class Camera(Addon):
             resnet18 = torchvision.models.resnet18(pretrained=True).eval()
             modules=list(resnet18.children())[:-1]
             self.feature_extractor = torch.nn.Sequential(*modules).eval()
-            self.observation_space.spaces.update(
-                {'features': spaces.Box(-100., 100., shape=(512* 2,) if self.use_depth else(512,), dtype='float32')})
             self.use_cuda = torch.cuda.is_available()
             if self.use_cuda:
                 logger.info('using cuda.half for feature extraction')
                 self.feature_extractor.to('cuda').half()
+
+            # Two 512 feature strings
+            self.observation_space.spaces.update(
+                {'features': spaces.Box(-100., 100., shape=(512* 2,) if self.use_depth else(512,), dtype='float32')})
+
+        if self.use_grconvnet3:
+            assert self.resolution[0]%2==1, 'should have odd numbered resolution for use_grconvnet3'
+            assert self.resolution[1]%2==1, 'should have odd numbered resolution for use_grconvnet3'
+
+            from .grconvnet3 import GenerativeResnet3Headless
+            grconvnet3_path = os.path.join(
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'),
+                'data/models/cornell-randsplit-rgbd-grconvnet3-drop1-ch16/epoch_30_iou_0.97.pt'
+            )
+            self.feature_extractor = GenerativeResnet3Headless().eval()
+            self.feature_extractor.load_state_dict(state_dict=torch.load(grconvnet3_path))
+            self.use_cuda = torch.cuda.is_available()
+            if self.use_cuda:
+                logger.info('using cuda.half for feature extraction')
+                self.feature_extractor.to('cuda').half()
+
+            self.observation_space.spaces.update(
+                {'features': spaces.Box(-1., 1., shape=self.resolution + [16], dtype='float32')})
         
         if self.use_seg_mask:
             self.observation_space.spaces.update(
                 {'segmentation_mask': spaces.Box(0., 10., shape=self.resolution, dtype='float32')})
 
     def extract_features(self, obs):
-        # see https://arxiv.org/pdf/1710.10710.pdf
-        # and https://github.com/LuciaBaldassini/Grasping_Detection_System
+        if self.use_grconvnet3:
+            depth = obs['depth']
+            rgb = obs['rgb']
 
-        normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225])
+            # transpose
+            depth = np.clip((depth - depth.mean()), -1, 1)[:,:, None].transpose((2, 0, 1))
+            rgb = rgb.transpose((2, 0, 1))
 
-        with torch.no_grad():
-            im = Image.fromarray(np.uint8(obs['rgb'] * 255))
-            im = im.resize((224, 224))
-            x1 = normalize(to_tensor(im))
+            # join
+            x = np.concatenate(
+                (
+                    np.expand_dims(depth, 0),
+                    np.expand_dims(rgb, 0)
+                ),
+                1
+            )
+            x = torch.from_numpy(x.astype(np.float32))
+            with torch.no_grad():
+                if self.use_cuda:
+                    x = x.to('cuda').half()
+                h = self.feature_extractor(x)  # out Shape(1, 16, resolution[0], resolution[1])
+                h = h.cpu().detach().numpy()[0].astype(np.float32).transpose([1, 2, 0])
+            return h # (res, res, 16)
+        else:
+            # see https://arxiv.org/pdf/1710.10710.pdf
+            # and https://github.com/LuciaBaldassini/Grasping_Detection_System
 
-            im = -1/(obs['depth']-1.) # from [-99, 0) to [0, 1]
-            im = Image.fromarray(np.uint8(im * 255)).convert('RGB')
-            im = im.resize((224, 224))
-            x2 = normalize(to_tensor(im))
+            normalize = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                    std=[0.229, 0.224, 0.225])
 
-            x = torch.stack([x1, x2])
-            if self.use_cuda:
-                x = x.to('cuda').half()
-            h = self.feature_extractor(x)
-            h = h.cpu().detach().numpy() # shape (2, 512)
-        return h.flatten()
+            with torch.no_grad():
+                im = Image.fromarray(np.uint8(obs['rgb'] * 255))
+                im = im.resize((224, 224))
+                x1 = normalize(to_tensor(im))
+
+                im = -1/(obs['depth']-1.) # from [-99, 0) to [0, 1]
+                im = Image.fromarray(np.uint8(im * 255)).convert('RGB')
+                im = im.resize((224, 224))
+                x2 = normalize(to_tensor(im))
+
+                x = torch.stack([x1, x2])
+                if self.use_cuda:
+                    x = x.to('cuda').half()
+                h = self.feature_extractor(x)
+                h = h.cpu().detach().numpy()  # shape (2, 512)
+            return h.flatten()
         
 
     def observe(self):
@@ -126,17 +173,18 @@ class Camera(Addon):
 
         if self.use_depth:
             # the depth buffer is normalised to [0 1] whereas NDC coords require [-1 1] ref: https://bit.ly/2rcXidZ
-            depth_ndc = np.array(image[3], copy=False).reshape(self.resolution) * 2 - 1
+            depth = np.array(image[3], copy=False).reshape(self.resolution) * 2 - 1
 
-            # recover eye coordinate depth using the projection matrix ref: https://bit.ly/2vZJCsx this makes it -99 to 0 distance
-            depth = self.K[2, 3] / (self.K[3, 2] * depth_ndc - self.K[2, 2])
+            if not self.use_grconvnet3:
+                # recover eye coordinate depth using the projection matrix ref: https://bit.ly/2vZJCsx this makes it -99 to 0 distance
+                depth = self.K[2, 3] / (self.K[3, 2] * depth - self.K[2, 2])
 
             obs['depth'] = depth
 
         if self.use_seg_mask:
             obs['segmentation_mask'] = np.array(image[4], copy=False).reshape(self.resolution)
 
-        if self.use_features:
+        if self.use_features or self.use_grconvnet3:
             obs['features'] = self.extract_features(obs)
 
         return obs
