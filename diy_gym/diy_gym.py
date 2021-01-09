@@ -66,7 +66,7 @@ class DIYGym(gym.Env, Receptor):
         self._max_episode_steps = config.get('max_episode_steps') if 'max_episode_steps' in config else None
         self.hot_start = config.get('hot_start', 1)
 
-        if config.get('render', True):
+        if config.get('render', False):
             distance = config.get('camera_distance', 2.0)
             yaw = config.get('camera_yaw', 180)
             pitch = config.get('camera_pitch', -41)
