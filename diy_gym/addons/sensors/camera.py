@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import os
 import logging
 from torchvision.transforms.functional import to_tensor
-logger = logging.getLogger('diy_gym')
+from loguru import logger
 
 class Camera(Addon):
     """Captures RGB, depth and segmentation images from the perspective of a model or fixed in the world frame.
@@ -69,7 +69,7 @@ class Camera(Addon):
             modules=list(resnet18.children())[:-1]
             self.feature_extractor = torch.nn.Sequential(*modules).eval()
             self.feature_extractor = self.feature_extractor.to(self.dtype).to(self.device)
-            logger.info(f'using resnet at {self.device} {self.dtype} for feature extraction')
+            logger.info(f'using resnet at {self.device} {self.dtype} for feature extraction. parent={parent}.{config.get("frame")}')
 
             # Two 512 feature strings
             self.observation_space.spaces.update(
@@ -85,11 +85,11 @@ class Camera(Addon):
             )
             self.feature_extractor = GenerativeResnet3Headless().eval()
             self.feature_extractor.load_state_dict(state_dict=torch.load(grconvnet3_path))
-            logger.info(f'using grconvnet3 at {self.device} {self.dtype} for feature extraction')
+            logger.info(f'using grconvnet3 at {self.device} {self.dtype} for feature extraction. parent={parent}.{config.get("frame")}')
             self.feature_extractor = self.feature_extractor.to(self.dtype).to(self.device)
 
             self.observation_space.spaces.update(
-                {'features': spaces.Box(-1., 1., shape=(self.resolution[0]//8, self.resolution[1]//8, 4), dtype='float16')})
+                {'features': spaces.Box(-1., 1., shape=(self.resolution[0]//8-1, self.resolution[1]//8-1, 4), dtype='float16')})
         
         if self.use_seg_mask:
             self.observation_space.spaces.update(
