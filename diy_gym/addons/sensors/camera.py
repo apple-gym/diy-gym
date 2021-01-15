@@ -89,7 +89,7 @@ class Camera(Addon):
             self.feature_extractor = self.feature_extractor.to(self.dtype).to(self.device)
 
             self.observation_space.spaces.update(
-                {'features': spaces.Box(-1., 1., shape=(self.resolution[0]//8-1, self.resolution[1]//8-1, 4), dtype='float16')})
+                {'features': spaces.Box(-1., 1., shape=(self.resolution[0]//4-1, self.resolution[1]//4-1, 4), dtype='float16')})
         
         if self.use_seg_mask:
             self.observation_space.spaces.update(
@@ -117,8 +117,9 @@ class Camera(Addon):
             with torch.no_grad():
                 x = torch.from_numpy(x.astype(np.float32)).to(self.dtype).to(self.device)
                 h = self.feature_extractor(x)  # out Shape(1, 4, resolution[0]//4, resolution[1]//4)
-                h = F.max_pool2d(h, kernel_size=3, stride=2)  # (1, 4, resolution[0]//8 resolution[1]//8)
+                # h = F.max_pool2d(h, kernel_size=3, stride=2)  # (1, 4, resolution[0]//8 resolution[1]//8)
                 # h = F.max_pool2d(h, kernel_size=3, stride=2)  # (1, 4, resolution[0]//16 resolution[1]//16)
+                h = F.tanh(h) # from -inf, info, to 0,1
                 h = h.cpu().detach().numpy()[0].transpose([1, 2, 0]).astype(np.float16)
             return h # (res, res, 16)
         else:
@@ -138,7 +139,7 @@ class Camera(Addon):
                 im = im.resize((224, 224))
                 x2 = normalize(to_tensor(im))
 
-                x = torch.stack([x1, x2])
+                x = torch.tanh([x1, x2])
                 x = x.to(self.dtype).to(self.device)
                 h = self.feature_extractor(x)
                 h = h.cpu().detach().numpy()  # shape (2, 512)

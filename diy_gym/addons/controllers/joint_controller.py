@@ -19,6 +19,7 @@ class JointController(Addon):
 
         self.position_gain = config.get('position_gain', 0.015)
         self.velocity_gain = config.get('velocity_gain', 1.0)
+        self.scaling = config.get('action_scaling', 1.0)
 
         self.control_mode = {
             'position': p.POSITION_CONTROL,
@@ -44,12 +45,12 @@ class JointController(Addon):
 
 
         if self.control_mode == p.TORQUE_CONTROL:
-            self.action_space = spaces.Box(-self.torque_limit, self.torque_limit, dtype='float32')
+            self.action_space = spaces.Box(-self.torque_limit/self.scaling, self.torque_limit/self.scaling, dtype='float32')
         elif self.control_mode == p.VELOCITY_CONTROL:
-            self.action_space = spaces.Box(-self.vel_limit, self.vel_limit, dtype='float32')
+            self.action_space = spaces.Box(-self.vel_limit/self.scaling, self.vel_limit/self.scaling, dtype='float32')
         else:
-            low = np.array([p.getJointInfo(self.uid, joint_id)[8] for joint_id in self.joint_ids])
-            high = np.array([p.getJointInfo(self.uid, joint_id)[9] for joint_id in self.joint_ids])
+            low = np.array([p.getJointInfo(self.uid, joint_id)[8] for joint_id in self.joint_ids])/self.scaling
+            high = np.array([p.getJointInfo(self.uid, joint_id)[9] for joint_id in self.joint_ids])/self.scaling
             self.action_space = spaces.Box(low, high, shape=(len(low), ), dtype='float32')
         self.torque_limit
 
@@ -61,6 +62,7 @@ class JointController(Addon):
             p.resetJointState(self.uid, joint_id, angle + d_angle)
 
     def update(self, action):
+        action = tuple(a * self.scaling for a in action)
         pGain = self.position_gain
         vGain = self.velocity_gain
 
