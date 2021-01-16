@@ -59,7 +59,7 @@ class Camera(Addon):
         })
 
         if self.use_depth:
-            self.observation_space.spaces.update({'depth': spaces.Box(0., 10., shape=self.resolution, dtype='float32')})
+            self.observation_space.spaces.update({'depth': spaces.Box(0., 1., shape=self.resolution, dtype='float32')})
 
 
         self.dtype = torch.half if torch.cuda.is_available() else torch.float
@@ -179,6 +179,9 @@ class Camera(Addon):
             if not self.use_grconvnet3:
                 # recover eye coordinate depth using the projection matrix ref: https://bit.ly/2vZJCsx this makes it -99 to 0 distance
                 depth = self.K[2, 3] / (self.K[3, 2] * depth - self.K[2, 2])
+
+                # back to [0, 1]
+                depth = -np.tanh(depth)
 
             obs['depth'] = depth
 
