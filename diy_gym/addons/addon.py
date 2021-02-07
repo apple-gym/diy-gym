@@ -17,6 +17,7 @@ class AddonFactory:
         def __init__(self):
             from .controllers.ik_controller import InverseKinematicsController
             from .controllers.joint_controller import JointController
+            from .controllers.joint_gain_controller import JointGainController
             from .controllers.admittance_controller import AdmittanceController
             from .controllers.external_force import ExternalForce
             from .sensors.camera import Camera
@@ -38,6 +39,7 @@ class AddonFactory:
             self.addons = {
                 'ik_controller': InverseKinematicsController,
                 'joint_controller': JointController,
+                'joint_gain_controller': JointGainController,
                 'admittance_controller': AdmittanceController,
                 'camera': Camera,
                 'joint_state_sensor': JointStateSensor,

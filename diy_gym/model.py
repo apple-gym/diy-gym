@@ -60,7 +60,7 @@ class Model(Receptor):
             full_urdf_path = next(
                 os.path.join(path, urdf) for path in urdf_path if os.path.isfile(os.path.join(path, urdf)))
         except StopIteration:
-            raise ValueError('Could not find URDF: ' + urdf)
+            raise ValueError('Could not find URDF: {urdf} in {urdf_path}')
 
         flags = 0
         if config.get('URDF_USE_MATERIAL_COLORS_FROM_MTL', False):

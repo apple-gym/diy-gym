@@ -6,20 +6,25 @@ import numpy as np
 from diy_gym.addons.addon import Addon
 
 
-class JointController(Addon):
+class JointGainController(Addon):
     """
-    JointController
+    JointController with Gain
+
+    if gain <0, it's automatic (scaled based on distance to target)
+    if gain >0 it's controlled by agent
 
     Desired position or velocity or torque
     """
     def __init__(self, parent, config):
-        super(JointController, self).__init__(parent, config)
+        super(JointGainController, self).__init__(parent, config)
 
         self.uid = parent.uid
 
         self.position_gain = config.get('position_gain', 0.015)
         self.velocity_gain = config.get('velocity_gain', 1.0)
         self.scaling = config.get('action_scaling', 1.0)
+        self.debug = config.get('debug', 0)
+        self.last = None
 
         self.control_mode = {
             'position': p.POSITION_CONTROL,
@@ -47,8 +52,8 @@ class JointController(Addon):
         elif self.control_mode == p.VELOCITY_CONTROL:
             self.action_space = spaces.Box(-self.vel_limit/self.scaling, self.vel_limit/self.scaling, dtype='float32')
         else:
-            low = np.array([p.getJointInfo(self.uid, joint_id)[8] for joint_id in self.joint_ids])/self.scaling
-            high = np.array([p.getJointInfo(self.uid, joint_id)[9] for joint_id in self.joint_ids])/self.scaling
+            low = np.array([p.getJointInfo(self.uid, joint_id)[8] for joint_id in self.joint_ids]+[-1,])/self.scaling
+            high = np.array([p.getJointInfo(self.uid, joint_id)[9] for joint_id in self.joint_ids]+[1,])/self.scaling
             self.action_space = spaces.Box(low, high, shape=(len(low), ), dtype='float32')
         self.torque_limit
 
@@ -58,20 +63,45 @@ class JointController(Addon):
         random_delta = np.random.random(len(self.joint_ids)) * self.random_reset
         for joint_id, angle, d_angle in zip(self.joint_ids, self.rest_position, random_delta):
             p.resetJointState(self.uid, joint_id, angle + d_angle)
+        if self.debug:
+            p.removeAllUserDebugItems()
+            self.last = None
 
     def update(self, action):
+        if self.debug:
+            # A colored trace for ea
+            n = p.getNumJoints(self.uid)
+            joint_pos = np.array([pbp.get_link_pose(self.uid, i)[0] for i in range(n)])
+            if self.last is not None:
+                for i in range(n):
+                    p.addUserDebugLine(
+                                lineFromXYZ=joint_pos[i], 
+                                lineToXYZ=self.last[i], lineColorRGB=[(n-i)/(n+1), 0.9, i/(n+1)], lineWidth=1, lifeTime=360)
+            self.last = joint_pos
+        
         action = tuple(a * self.scaling for a in action)
+        gain = action[-1]
+        action = action[:-1]
+
         pGain = self.position_gain
         vGain = self.velocity_gain
 
         kwargs = {}
 
         if self.control_mode == p.POSITION_CONTROL:
-            # To be able to move close, we need a tighter fit as we get closer
-            joint_state = pbp.get_joint_positions(self.uid, self.joint_ids)
-            dist = pbp.get_distance(action, joint_state)
-            pGain = pGain / (dist + 1e-2)
-            vGain = vGain + pGain ** 2
+            # To be able to move close, we need a tighter fit (higher gain) as we get closer
+            if gain <= 0:
+                joint_state = pbp.get_joint_positions(self.uid, self.joint_ids)
+                # distance in joint space, per joint
+                dist = np.abs(np.array(action)-joint_state)/np.abs(self.action_space.high-self.action_space.low)[:-1]
+                pGain = pGain / (dist + 1e-2) 
+                # but 1<vgain>pGain for stability
+                vGain = vGain + pGain ** 2
+            else:
+                joint_state = pbp.get_joint_positions(self.uid, self.joint_ids)
+                dist = np.abs(np.array(action)-joint_state)/np.abs(self.action_space.high-self.action_space.low)[:-1]
+                pGain = pGain * gain / (dist + 1e-2)
+                vGain = vGain + pGain ** 2
 
             kwargs['targetPositions'] = action
             kwargs['targetVelocities'] = [0.0] * len(action)
@@ -79,12 +109,16 @@ class JointController(Addon):
         elif self.control_mode == p.VELOCITY_CONTROL:
             kwargs['targetVelocities'] = action
             kwargs['forces'] = self.torque_limit
+            pGain = [pGain] * len(action)
+            vGain = [vGain] * len(action)
         else:
             kwargs['forces'] = action
+            pGain = [pGain] * len(action)
+            vGain = [vGain] * len(action)
 
         p.setJointMotorControlArray(self.uid,
                                     self.joint_ids,
                                     self.control_mode,
-                                    positionGains=[pGain] * len(action),
-                                    velocityGains=[vGain] * len(action),
+                                    positionGains=pGain,
+                                    velocityGains=vGain,
                                     **kwargs)
