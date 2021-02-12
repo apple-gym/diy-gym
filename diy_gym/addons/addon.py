@@ -35,6 +35,7 @@ class AddonFactory:
             from .misc.visual_randomizer import VisualRandomizer
             from .misc.dynamics_randomizer import DynamicsRandomizer
             from .debug.debug_addon import DebugMarkers
+            from .debug.joint_trace import JointTrace
 
             self.addons = {
                 'ik_controller': InverseKinematicsController,
@@ -57,6 +58,7 @@ class AddonFactory:
                 'dynamics_randomizer': DynamicsRandomizer,
                 'out_of_bounds_penalty': OutOfBoundsPenalty,
                 'debug_markers': DebugMarkers,
+                'joint_trace': JointTrace,
             }
 
     @staticmethod

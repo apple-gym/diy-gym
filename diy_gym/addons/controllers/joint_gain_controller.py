@@ -23,8 +23,6 @@ class JointGainController(Addon):
         self.position_gain = config.get('position_gain', 0.015)
         self.velocity_gain = config.get('velocity_gain', 1.0)
         self.scaling = config.get('action_scaling', 1.0)
-        self.debug = config.get('debug', 0)
-        self.last = None
 
         self.control_mode = {
             'position': p.POSITION_CONTROL,
@@ -48,12 +46,13 @@ class JointGainController(Addon):
         self.vel_limit = np.array([p.getJointInfo(self.uid, joint_id)[11] for joint_id in self.joint_ids])
 
         if self.control_mode == p.TORQUE_CONTROL:
-            self.action_space = spaces.Box(-self.torque_limit/self.scaling, self.torque_limit/self.scaling, dtype='float32')
+            tl = np.array(list(self.torque_limit)+[1])
+            self.action_space = spaces.Box(-tl, tl, dtype='float32')
         elif self.control_mode == p.VELOCITY_CONTROL:
             self.action_space = spaces.Box(-self.vel_limit/self.scaling, self.vel_limit/self.scaling, dtype='float32')
         else:
-            low = np.array([p.getJointInfo(self.uid, joint_id)[8] for joint_id in self.joint_ids]+[-1,])/self.scaling
-            high = np.array([p.getJointInfo(self.uid, joint_id)[9] for joint_id in self.joint_ids]+[1,])/self.scaling
+            low = np.array([p.getJointInfo(self.uid, joint_id)[8] for joint_id in self.joint_ids]+[-6,])/self.scaling
+            high = np.array([p.getJointInfo(self.uid, joint_id)[9] for joint_id in self.joint_ids]+[6,])/self.scaling
             self.action_space = spaces.Box(low, high, shape=(len(low), ), dtype='float32')
         self.torque_limit
 
@@ -63,24 +62,11 @@ class JointGainController(Addon):
         random_delta = np.random.random(len(self.joint_ids)) * self.random_reset
         for joint_id, angle, d_angle in zip(self.joint_ids, self.rest_position, random_delta):
             p.resetJointState(self.uid, joint_id, angle + d_angle)
-        if self.debug:
-            p.removeAllUserDebugItems()
-            self.last = None
 
     def update(self, action):
-        if self.debug:
-            # A colored trace for ea
-            n = p.getNumJoints(self.uid)
-            joint_pos = np.array([pbp.get_link_pose(self.uid, i)[0] for i in range(n)])
-            if self.last is not None:
-                for i in range(n):
-                    p.addUserDebugLine(
-                                lineFromXYZ=joint_pos[i], 
-                                lineToXYZ=self.last[i], lineColorRGB=[(n-i)/(n+1), 0.9, i/(n+1)], lineWidth=1, lifeTime=360)
-            self.last = joint_pos
         
         action = tuple(a * self.scaling for a in action)
-        gain = action[-1]
+        gain = np.abs(action[-1])/6
         action = action[:-1]
 
         pGain = self.position_gain
@@ -112,6 +98,10 @@ class JointGainController(Addon):
             pGain = [pGain] * len(action)
             vGain = [vGain] * len(action)
         else:
+            # To be able to move close, we need a tighter fit (higher gain) as we get closer
+            if gain > 0:
+                pGain = pGain * gain
+                vGain = vGain + pGain ** 2
             kwargs['forces'] = action
             pGain = [pGain] * len(action)
             vGain = [vGain] * len(action)

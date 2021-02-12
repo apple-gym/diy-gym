@@ -4,7 +4,9 @@ import numpy as np
 
 class DebugMarkers(Addon):
     """
-    Adds a debug market to frame
+    Adds a debug line from source to target
+
+    NOT FINISHED
     
     config:
     - target_frame_name
