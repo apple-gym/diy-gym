@@ -74,7 +74,7 @@ class DIYGym(gym.Env, Receptor):
             cId = p.connect(p.GUI)#, options="--opengl2")
             # cId = p.connect(p.GUI, "window_backend=2") # HACK
             p.resetDebugVisualizerCamera(distance, yaw, pitch, target_position)
-            p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW,0)
+            p.configureDebugVisualizer(p.COV_ENABLE_SEGMENTATION_MARK_PREVIEW, 0)
         else:
             cId = p.connect(p.SHARED_MEMORY)
             if cId < 0: p.connect(p.DIRECT)

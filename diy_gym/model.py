@@ -67,6 +67,8 @@ class Model(Receptor):
             flags = flags | p.URDF_USE_MATERIAL_COLORS_FROM_MTL
         if config.get('URDF_USE_SELF_COLLISION_EXCLUDE_PARENT', False):
             flags = flags | p.URDF_USE_SELF_COLLISION_EXCLUDE_PARENT
+            flags = flags | p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS
+            flags = flags | p.URDF_USE_SELF_COLLISION
         if config.get('URDF_USE_IMPLICIT_CYLINDER', False):
             flags |= p.URDF_USE_IMPLICIT_CYLINDER
         if config.get('URDF_MERGE_FIXED_LINKS', False):
