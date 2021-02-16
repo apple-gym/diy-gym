@@ -9,6 +9,10 @@ import torch
 import torch.nn.functional as F
 import os
 import logging
+
+from pytransform3d import rotations as pr
+from pytransform3d import transformations as pt
+
 from torchvision.transforms.functional import to_tensor
 from loguru import logger
 
@@ -20,12 +24,13 @@ class Camera(Addon):
             captured by the depth images (i.e objects at a distance that is outside these boundaries won't
             appear in the depth image)
         field_of_view (float, optional, 70): defines the perspective matrix of the camera
+        parent_model
+        target_model
         frame (str, optional): the frame on the parent model to which the camera will be attached
             (defaults to the base frame)
+        target_frame
         resolution (list of float, optional, [640, 480]): defines the width and height (respectively) of the
             images captured by the camera
-        xyz (list of float, optional, [0,0,0]): the offset relative to the `frame` at which to spawn the camera
-        rpy (list of float, optional, [0,0,0]): the orientation relative to the `frame` at which to spawn the camera
             expressed in euler angles
         use_depth (bool, optional, False): whether to include depth images in observations
         use_segmentation_mask (bool, optional, False): whether to include segmentation images in observations
@@ -39,15 +44,23 @@ class Camera(Addon):
         self.resolution = config.get('resolution', [256, 256])
         self.aspect = self.resolution[0] / self.resolution[1]
 
-        self.uid = parent.uid if isinstance(parent, Model) else -1
-        self.frame_id = parent.get_frame_id(config.get('frame')) if 'frame' in config else -1
+        if 'source_model' in config:
+            self.source_model = parent.models[config.get('source_model')]
+        else:
+            self.source_model = parent
 
-        xyz = config.get('xyz', [0., 0., 0.])
-        rpy = config.get('rpy', [0., 0., 0.])
+        self.uid = self.source_model.uid if isinstance(self.source_model, Model) else -1
+        self.frame_id = self.source_model.get_frame_id(config.get('frame')) if 'frame' in config else -1
+
+        self.target_model = config.get('target_model', None)
+        if self.target_model is not None:
+            self.target_model = parent.models[config.get('target_model')]
+            self.target_frame_id = self.target_model.get_frame_id(
+                config.get('target_frame')) if 'target_frame' in config else -1
 
         self.use_depth = config.get('use_depth', True)
         self.use_seg_mask = config.get('use_segmentation_mask', False)
-        self.use_features=config.get('use_features', False)
+        self.use_features = config.get('use_features', False)
         self.use_grconvnet3 = config.get('use_grconvnet3', False)
 
         self.T_parent_cam = self.trans_from_xyz_quat(xyz, p.getQuaternionFromEuler(rpy))
@@ -119,7 +132,7 @@ class Camera(Addon):
                 h = self.feature_extractor(x)  # out Shape(1, 4, resolution[0]//4, resolution[1]//4)
                 h = F.max_pool2d(h, kernel_size=3, stride=2)  # (1, 4, resolution[0]//8 resolution[1]//8)
                 # h = F.max_pool2d(h, kernel_size=3, stride=2)  # (1, 4, resolution[0]//16 resolution[1]//16)
-                h = F.tanh(h) # from -inf, info, to 0,1
+                h = torch.tanh(h) # from -inf, info, to 0,1
                 h = h.cpu().detach().numpy()[0].transpose([1, 2, 0]).astype(np.float16)
             return h # (res, res, 16)
         else:
@@ -156,7 +169,22 @@ class Camera(Addon):
         else:
             T_world_parent = np.eye(4)
 
-        T_world_cam = np.linalg.inv(T_world_parent.dot(self.T_parent_cam))
+        if self.target_model is not None:
+            source_xyz = p.getLinkState(
+                self.uid,
+                self.frame_id)[4] if self.frame_id >= 0 else p.getBasePositionAndOrientation(
+                    self.uid)[0]
+            target_xyz = p.getLinkState(
+                self.target_model.uid,
+                self.target_frame_id)[4] if self.target_frame_id >= 0 else p.getBasePositionAndOrientation(
+                    self.target_model.uid)[0]
+            self.T_parent_cam = p.computeViewMatrix(
+                cameraEyePosition=source_xyz, cameraTargetPosition=target_xyz,
+                                          cameraUpVector=[0, 0, 1]
+            )
+            self.T_parent_cam = np.asarray(self.T_parent_cam).reshape(4, 4).T
+
+        T_world_cam = self.T_parent_cam # np.linalg.inv(T_world_parent.dot(self.T_parent_cam))
 
         image = p.getCameraImage(self.resolution[0],
                                  self.resolution[1],
