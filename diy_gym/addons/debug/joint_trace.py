@@ -26,6 +26,7 @@ class JointTrace(Addon):
             joints = [info[1].decode('UTF-8') for info in joint_info]
 
         self.joint_ids = [info[0] for info in joint_info if info[1].decode('UTF-8') in joints and info[3] > -1]
+        self.last = None
 
     def reset(self):        
         p.removeAllUserDebugItems()

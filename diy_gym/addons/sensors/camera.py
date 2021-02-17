@@ -63,7 +63,7 @@ class Camera(Addon):
         self.use_features = config.get('use_features', False)
         self.use_grconvnet3 = config.get('use_grconvnet3', False)
 
-        self.T_parent_cam = self.trans_from_xyz_quat(xyz, p.getQuaternionFromEuler(rpy))
+        # self.T_parent_cam = self.trans_from_xyz_quat(xyz, p.getQuaternionFromEuler(rpy))
         self.projection_matrix = p.computeProjectionMatrixFOV(self.fov, self.aspect, self.near, self.far)
         self.K = np.array(self.projection_matrix).reshape([4, 4]).T
 
