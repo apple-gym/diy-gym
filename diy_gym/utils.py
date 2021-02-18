@@ -47,7 +47,8 @@ def flatten(to_flatten):
     def _flatten(to_flatten):
         l = []
         if isinstance(to_flatten, dict):
-            for val in to_flatten.values():
+            for k in sorted(to_flatten.keys()):
+                val = to_flatten[k]
                 l.extend(_flatten(val))
         elif isinstance(to_flatten, tuple):
             for val in to_flatten:

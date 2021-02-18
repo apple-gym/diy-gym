@@ -72,7 +72,7 @@ class Camera(Addon):
         })
 
         if self.use_depth:
-            self.observation_space.spaces.update({'depth': spaces.Box(0., 1., shape=self.resolution, dtype='float32')})
+            self.observation_space.spaces.update({'depth': spaces.Box(0., 1., shape=self.resolution + [1], dtype='float32')})
 
 
         self.dtype = torch.half if torch.cuda.is_available() else torch.float
@@ -211,7 +211,7 @@ class Camera(Addon):
                 # back to [0, 1]
                 depth = -np.tanh(depth)
 
-            obs['depth'] = depth
+            obs['depth'] = depth[:, :, None]
 
         if self.use_seg_mask:
             obs['segmentation_mask'] = np.array(image[4], copy=False).reshape(self.resolution)
