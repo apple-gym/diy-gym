@@ -36,10 +36,10 @@ class JointStateSensor(Addon):
         joint_position_upper_limit = np.array([info[9] for info in joint_info])
 
         self.observation_space = spaces.Dict(
-            {'position': spaces.Box(low=joint_position_lower_limit, high=joint_position_upper_limit, dtype='float32')})
+            {'position': spaces.Box(low=joint_position_lower_limit*10.0, high=joint_position_upper_limit*10.0, dtype='float32')})
 
         if self.include_velocity:
-            joint_velocity_limit = np.array([info[11] for info in joint_info])
+            joint_velocity_limit = np.array([info[11] for info in joint_info]) * 100
             self.observation_space.spaces['velocity'] = spaces.Box(low=-joint_velocity_limit,
                                                                    high=joint_velocity_limit,
                                                                    dtype='float32')
@@ -55,7 +55,7 @@ class JointStateSensor(Addon):
                                                                    dtype='float32')
 
         if self.include_effort:
-            torque_limit = np.array([info[10] for info in joint_info])
+            torque_limit = np.array([info[10] for info in joint_info]) * 10.0
             self.observation_space.spaces['effort'] = spaces.Box(low=-torque_limit, high=torque_limit, dtype='float32')
 
     def observe(self):
